@@ -45,22 +45,26 @@ const connectionString = process.env.DATABASE_URL || 'postgres://axrmtrqq:tPEX1P
 const db = pgp(connectionString);
 
 
-const expenseTracker = createExpenseDb;
+const expenseTracker = createExpenseDb(db);
 
 //Home route
-app.get('/', (req, res) => {
-    res.render('index');
+app.get('/', async(req, res) => {
+    const totals = await expenseTracker.categoryTotals();
+    console.log(totals)
+    res.render('index' , {expenseTotal:totals});
 });
 
 // Add Expense
 app.post('/expenses', async (req, res) => {
-    const { categoryId, amount } = req.body;
+    const { categoryId, amount , description} = req.body;
+    
     try {
-        await createExpenseDb.addExpense(categoryId, amount);
+        await  expenseTracker.addExpense(categoryId, amount , description);
 
         const expenses = await expenseTracker.allExpenses(); // Fetch the updated list of expenses
         const message = 'Expense added successfully';
-        res.render('expenses', { expenses, message });
+        res.redirect('/')
+       // res.render('index', { expenses, message });
     } catch (error) {
         console.error(error);
         res.status(500).send('Internal Server Error');
@@ -101,20 +105,20 @@ app.delete('/expenses/:expenseId', async (req, res) => {
 });
 
 // Get Category Totals
-app.get('/categoryTotals', async (req, res) => {
-    try {
-        const totals = await expenseTracker.categoryTotals();
-        if (totals.length > 0) {
-            res.render('categoryTotals', { totals });
-        } else {
-            const message = 'No category totals available';
-            res.render('noCategoryTotals', { message });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Internal Server Error');
-    }
-});
+// app.get('/categoryTotals', async (req, res) => {
+//     try {
+//         const totals = await expenseTracker.categoryTotals();
+//         if (totals.length > 0) {
+//             res.render('categoryTotals', { totals });
+//         } else {
+//             const message = 'No category totals available';
+//             res.render('noCategoryTotals', { message });
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).send('Internal Server Error');
+//     }
+// });
 
 
 

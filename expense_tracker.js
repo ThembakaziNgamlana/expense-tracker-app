@@ -1,21 +1,32 @@
 export default function createExpenseDb(db) {
-    async function addExpense(categoryId, amount) {
+    async function addExpense(categoryType, amount, description) {
+    
+     
       try {
-        const category = await db.oneOrNone('SELECT * FROM categories WHERE id = $1', [categoryId]);
+        const categoryId = await db.oneOrNone('SELECT * FROM category WHERE category_type = $1', [categoryType]);
   
-        if (!category) {
+        if (!categoryId) {
           throw new Error('Category not found');
         }
+        let multiplier = {
+          monthly: 1,
+          weekday: 5,
+          daily: 30,
+        };
+        let total = multiplier[categoryType] * amount
+  
+  
   
         await db.none(`
-            INSERT INTO expenses (expense, amount, total, category_id)
+            INSERT INTO expense (expense, amount, total, category_id)
             VALUES ($1, $2, $3, $4)
-        `, [category.category_type, parseFloat(amount), parseFloat(amount), categoryId]);
+        `, [description, parseFloat(amount), total, categoryId.id]);
   
         return { success: true, message: 'Expense added successfully' };
       } catch (error) {
         return { success: false, message: `Failed to add expense: ${error.message}` };
       }
+
     }
   
     async function allExpenses() {
@@ -31,6 +42,7 @@ export default function createExpenseDb(db) {
         return { success: false, message: `Failed to retrieve all expenses: ${error.message}` };
       }
     }
+  
   
     async function expensesForCategory(categoryId) {
       try {
@@ -63,27 +75,29 @@ export default function createExpenseDb(db) {
     }
   
     async function categoryTotals() {
+
       try {
+        
         const totals = await db.manyOrNone(`
-            SELECT category_id, SUM(amount) AS total
-            FROM expenses
-            GROUP BY category_id
+            SELECT SUM(total) AS total_expense
+            FROM expense
         `);
-  
-        return totals;
+ // console.log(totals)
+        return totals[0].total_expense;
+        
       } catch (error) {
         return { success: false, message: `Failed to calculate category totals: ${error.message}` };
       }
     }
   
     return {
-      expenseTracker: {
+      
         addExpense,
         allExpenses,
         expensesForCategory,
         deleteExpense,
         categoryTotals,
-      },
-    };
+      
+    }
   }
   
